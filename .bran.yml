@@ -3,6 +3,5 @@ win10:
     # - Release\uvbench.exe
 
 centos:
-    - "cd libuv-1.9.1 && ./gyp_uv.py -f make && BUILDTYPE=Release make -C out"
-    # - bash ./build
+    - bash ./build
     # - ./uvbench
