@@ -25,7 +25,7 @@ if(MSVC)
   endforeach()
 
 else()
-  set(BENCH_COMPILE_OPTIONS -Wall -Werror -O3)
+  set(BENCH_COMPILE_OPTIONS -Wall -Werror -O3 -std=c++0x)
 
   set(BENCH_LIBS
     ${CMAKE_SOURCE_DIR}/${LIBUV}/out/Release/libuv.a
@@ -36,6 +36,7 @@ endif()
 
 add_executable(uvbench
   src/main.cpp
+  src/UVWrapper.cpp
 )
 
 target_compile_options(uvbench PRIVATE ${BENCH_COMPILE_OPTIONS})

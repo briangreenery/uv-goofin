@@ -1,8 +1,15 @@
+#include "UVWrapper.h"
 #include <iostream>
-#include <uv.h>
 
 int main() {
-    uv_loop_t* loop = uv_loop_new();
-    uv_loop_delete(loop);
-    return 0;
+    try {
+        UV::Loop loop = UV::NewLoop();
+        return 0;
+    } catch (const std::exception& err) {
+        std::cerr << err.what() << std::endl;
+        return 1;
+    } catch (...) {
+        std::cerr << "(unknown error)" << std::endl;
+        return 1;
+    }
 }
