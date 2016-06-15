@@ -11,4 +11,4 @@ BUILDTYPE=Release make -C out
 popd
 
 cmake $SOURCE_DIR
-make all
+make all VERBOSE=1

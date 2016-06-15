@@ -25,6 +25,8 @@ if(MSVC)
   endforeach()
 
 else()
+  set(BENCH_COMPILE_OPTIONS -Wall -Werror -O3)
+
   set(BENCH_LIBS
     ${CMAKE_SOURCE_DIR}/${LIBUV}/out/Release/libuv.a
     pthread
