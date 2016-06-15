@@ -34,7 +34,10 @@ else()
   )
 endif()
 
-add_executable(uvbench main.cpp)
+add_executable(uvbench
+  src/main.cpp
+)
+
 target_compile_options(uvbench PRIVATE ${BENCH_COMPILE_OPTIONS})
 target_include_directories(uvbench PRIVATE ${LIBUV}/include)
 target_link_libraries(uvbench ${BENCH_LIBS})
