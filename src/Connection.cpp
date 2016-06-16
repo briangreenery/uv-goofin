@@ -10,6 +10,8 @@ Connection::Connection(Server& server)
 }
 
 void Connection::Init(uv_loop_t& loop) {
+    m_closing = false;
+
     http_parser_init(&m_httpParser, HTTP_REQUEST);
     m_httpParser.data = this;
 
@@ -17,12 +19,9 @@ void Connection::Init(uv_loop_t& loop) {
     m_httpParserSettings.on_message_complete = OnMessageComplete;
 
     uv_tcp_init(&loop, &m_tcp);
-
     m_tcp.data = this;
+
     m_writeReq.data = this;
-
-    m_closing = false;
-
     m_writePending = false;
     m_writesQueued = 0;
 }

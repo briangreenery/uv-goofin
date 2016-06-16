@@ -11,7 +11,7 @@ class Error : public std::exception {
 public:
     explicit Error(int number);
     virtual ~Error() throw();
-    virtual const char* what() throw();
+    virtual const char* what() const throw();
 
 private:
     const char* m_what;
