@@ -36,7 +36,9 @@ endif()
 
 add_executable(uvbench
   src/main.cpp
-  src/UVWrapper.cpp
+  src/Server.cpp
+  src/Connection.cpp
+  src/UVWrap.cpp
 )
 
 target_compile_options(uvbench PRIVATE ${BENCH_COMPILE_OPTIONS})

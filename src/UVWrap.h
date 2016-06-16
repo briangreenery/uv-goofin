@@ -22,14 +22,6 @@ inline void ThrowError(int error) {
         throw Error(error);
     }
 }
-
-struct DisposeLoop {
-    void operator()(uv_loop_t*);
-};
-
-typedef std::unique_ptr<uv_loop_t, DisposeLoop> Loop;
-
-Loop NewLoop();
 }
 
 #endif
