@@ -1,23 +1,37 @@
 #include "Connection.h"
 #include "Server.h"
 
-Connection::Connection(uv_loop_t* loop, Server& server)
-    : m_loop(loop), m_server(server), m_next(nullptr) {
+Connection::Connection(Server& server)
+    : m_server(server)
+    , m_next(nullptr)
+    , m_closing(false)
+    , m_writePending(false)
+    , m_writesQueued(0) {
 }
 
-void Connection::Init() {
+void Connection::Init(uv_loop_t& loop) {
+    http_parser_init(&m_httpParser, HTTP_REQUEST);
+    m_httpParser.data = this;
+
+    http_parser_settings_init(&m_httpParserSettings);
+    m_httpParserSettings.on_message_complete = OnMessageComplete;
+
+    uv_tcp_init(&loop, &m_tcp);
+
     m_tcp.data = this;
     m_writeReq.data = this;
-    uv_tcp_init(m_loop, &m_tcp);
+
+    m_closing = false;
+
+    m_writePending = false;
+    m_writesQueued = 0;
 }
 
 void Connection::Close() {
-    uv_close(reinterpret_cast<uv_handle_t*>(&m_tcp), OnClose);
-}
-
-void Connection::OnAlloc(size_t hint, uv_buf_t* buf) {
-    buf->base = reinterpret_cast<char*>(m_buffer);
-    buf->len = sizeof(m_buffer);
+    if (!m_closing) {
+        m_closing = true;
+        uv_close(reinterpret_cast<uv_handle_t*>(&m_tcp), OnClose);
+    }
 }
 
 void Connection::Read() {
@@ -27,18 +41,38 @@ void Connection::Read() {
     }
 }
 
+void Connection::OnAlloc(size_t hint, uv_buf_t* buf) {
+    buf->base = m_buffer;
+    buf->len = sizeof(m_buffer);
+}
+
 void Connection::OnRead(ssize_t nread, const uv_buf_t* buf) {
-    if (nread >= 0) {
-        Write();
-    } else if (nread < 0) {
+    if (nread > 0) {
+        size_t nparsed = http_parser_execute(
+            &m_httpParser, &m_httpParserSettings, m_buffer, nread);
+
+        if (nparsed != nread) {
+            Close();
+        }
+    } else {
         Close();
     }
 }
 
+void Connection::OnMessageComplete() {
+    if (m_writePending) {
+        m_writesQueued += 1;
+    } else {
+        Write();
+    }
+}
+
 void Connection::Write() {
+    m_writePending = true;
+
     const char response[] = "HTTP/1.1 200 OK\r\n"
                             "Server: uvbench\r\n"
-                            "Connection: close\r\n"
+                            "Connection: keep-alive\r\n"
                             "Date: Thu, 16 Jun 2016 00:10:17 GMT\r\n"
                             "Content-Length: 13\r\n"
                             "\r\n"
@@ -54,7 +88,14 @@ void Connection::Write() {
 }
 
 void Connection::OnWrite(int status) {
-    Close();
+    m_writePending = false;
+
+    if (status) {
+        Close();
+    } else if (m_writesQueued != 0) {
+        m_writesQueued -= 1;
+        Write();
+    }
 }
 
 void Connection::OnClose() {
@@ -81,4 +122,10 @@ void Connection::OnWrite(uv_write_t* req, int status) {
 void Connection::OnClose(uv_handle_t* handle) {
     Connection& connection = *static_cast<Connection*>(handle->data);
     connection.OnClose();
+}
+
+int Connection::OnMessageComplete(http_parser* httpParser) {
+    Connection& connection = *static_cast<Connection*>(httpParser->data);
+    connection.OnMessageComplete();
+    return 0;
 }

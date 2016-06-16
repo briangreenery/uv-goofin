@@ -10,10 +10,10 @@ int main() {
         uv_loop_t loop;
         UV::ThrowError(uv_loop_init(&loop));
 
-        Server server(&loop);
+        Server server(loop);
         server.Listen(port);
-        std::cout << "Listening on port " << port << std::endl;
 
+        std::cout << "Listening on port " << port << std::endl;
         uv_run(&loop, UV_RUN_DEFAULT);
     } catch (const std::exception& err) {
         std::cerr << err.what() << std::endl;
