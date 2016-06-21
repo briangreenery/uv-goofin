@@ -9,7 +9,7 @@ public:
     explicit Server(uv_loop_t&);
 
     void Listen(uint16_t port);
-    void OnConnectionClosed(Connection&);
+    void OnConnectionFree(Connection&);
 
 private:
     void Accept();

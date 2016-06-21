@@ -5,10 +5,5 @@ set -x
 
 SOURCE_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 
-pushd libuv-1.9.1
-./gyp_uv.py -f make
-BUILDTYPE=Release make -C out
-popd
-
-cmake $SOURCE_DIR
+cmake -DCMAKE_BUILD_TYPE=Release $SOURCE_DIR
 make all VERBOSE=1

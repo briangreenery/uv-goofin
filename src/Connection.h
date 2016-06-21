@@ -20,7 +20,11 @@ public:
 
 private:
     void Close();
+    void OnReadData(size_t);
+    void OnReadEnd();
     void Write();
+
+    void Shutdown();
 
     void OnAlloc(size_t, uv_buf_t*);
     static void OnAlloc(uv_handle_t*, size_t, uv_buf_t*);
@@ -31,26 +35,22 @@ private:
     void OnWrite(int);
     static void OnWrite(uv_write_t*, int);
 
+    void OnShutdown(int);
+    static void OnShutdown(uv_shutdown_t*, int);
+
     void OnClose();
     static void OnClose(uv_handle_t*);
 
-    void OnMessageComplete();
-    static int OnMessageComplete(http_parser*);
-
-    enum class State {
-        accepted,
-        reading,
-        closing,
-        closed,
-    };
-    
-    State m_state;
+    void OnHttpRequestEnd();
+    static int OnHttpRequestEnd(http_parser*);
 
     Server& m_server;
     Connection* m_next;
 
     uv_tcp_t m_tcp;
     bool m_closing;
+
+    uv_shutdown_t m_shutdownReq;
 
     uv_write_t m_writeReq;
     uv_buf_t m_writeBuf;
@@ -59,7 +59,7 @@ private:
 
     http_parser m_httpParser;
     http_parser_settings m_httpParserSettings;
-    bool m_httpShouldClose;
+    bool m_keepAlive;
 
     char m_buffer[1024];
 };

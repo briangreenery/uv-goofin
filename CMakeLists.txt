@@ -17,6 +17,8 @@ include(external/libuv.cmake)
 
 if(MSVC)
     set(UVBENCH_LIBS Ws2_32.lib Psapi.lib UserEnv.lib Iphlpapi.lib)
+else()
+    set(UVBENCH_OPTS -std=c++11)
 endif()
 
 add_executable(uvbench
@@ -27,5 +29,6 @@ add_executable(uvbench
 )
 
 add_dependencies(uvbench libuv)
+target_compile_options(uvbench PRIVATE ${UVBENCH_OPTS})
 target_include_directories(uvbench PRIVATE ${LIBUV_INC})
 target_link_libraries(uvbench http-parser ${LIBUV_LIB} ${UVBENCH_LIBS})
