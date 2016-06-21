@@ -77,7 +77,7 @@ void Connection::OnReadEnd() {
 }
 
 void Connection::OnHttpRequestEnd() {
-    m_keepAlive = http_should_keep_alive(&m_httpParser);
+    m_keepAlive = http_should_keep_alive(&m_httpParser) ? true : false;
     m_writesQueued += 1;
 }
 
