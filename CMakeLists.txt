@@ -15,6 +15,10 @@ endif()
 include(external/http-parser.cmake)
 include(external/libuv.cmake)
 
+if(MSVC)
+    set(UVBENCH_LIBS Ws2_32.lib Psapi.lib UserEnv.lib Iphlpapi.lib)
+endif()
+
 add_executable(uvbench
     src/Main.cpp
     src/UVWrap.cpp
@@ -24,4 +28,4 @@ add_executable(uvbench
 
 add_dependencies(uvbench libuv)
 target_include_directories(uvbench PRIVATE ${LIBUV_INC})
-target_link_libraries(uvbench http-parser ${LIBUV_LIB})
+target_link_libraries(uvbench http-parser ${LIBUV_LIB} ${UVBENCH_LIBS})
