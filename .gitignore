@@ -1,2 +1,8 @@
 .bran
 .DS_Store
+CMakeFiles
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+libhttp-parser.a
+uvbench

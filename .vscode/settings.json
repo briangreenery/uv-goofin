@@ -6,6 +6,11 @@
         "**/.git": true,
         "**/.bran": true,
         "**/.svn": true,
-        "**/.DS_Store": true
+        "**/.DS_Store": true,
+        "**/CMakeFiles": true,
+        "CMakeCache.txt": true,
+        "cmake_install.cmake": true,
+        "libhttp_parser.a": true,
+        "uvbench": true
     }
 }

@@ -10,17 +10,16 @@ class Connection {
 public:
     explicit Connection(Server&);
 
-    void Init(uv_loop_t&);
-    void Close();
-
     Connection* NextConnection();
     void SetNextConnection(Connection*);
 
-    uv_tcp_t* GetHandle();
-
+    void Init(uv_loop_t&);
     void Read();
 
+    uv_tcp_t* GetHandle();
+
 private:
+    void Close();
     void Write();
 
     void OnAlloc(size_t, uv_buf_t*);
@@ -38,6 +37,15 @@ private:
     void OnMessageComplete();
     static int OnMessageComplete(http_parser*);
 
+    enum class State {
+        accepted,
+        reading,
+        closing,
+        closed,
+    };
+    
+    State m_state;
+
     Server& m_server;
     Connection* m_next;
 
@@ -51,6 +59,7 @@ private:
 
     http_parser m_httpParser;
     http_parser_settings m_httpParserSettings;
+    bool m_httpShouldClose;
 
     char m_buffer[1024];
 };

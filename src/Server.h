@@ -13,7 +13,9 @@ public:
 
 private:
     void Accept();
-    void AddFreeConnection(Connection&);
+
+    void PushFree(Connection&);
+    Connection* PopFree();
 
     void OnConnection(int status);
     static void OnConnection(uv_stream_t* server, int status);
@@ -21,9 +23,9 @@ private:
     uv_loop_t& m_loop;
 
     uv_tcp_t m_tcp;
-    Connection* m_nextFree;
+    size_t m_acceptsQueued;
 
-    size_t m_pendingAccepts;
+    Connection* m_nextFree;
     std::vector<Connection> m_connections;
 };
 

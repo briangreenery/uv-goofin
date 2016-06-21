@@ -2,35 +2,32 @@
 #include "Server.h"
 
 Connection::Connection(Server& server)
-    : m_server(server)
-    , m_next(nullptr)
-    , m_closing(false)
-    , m_writePending(false)
-    , m_writesQueued(0) {
+    : m_server(server), m_next(nullptr), m_writesQueued(0) {
 }
 
 void Connection::Init(uv_loop_t& loop) {
-    m_closing = false;
+    uv_tcp_init(&loop, &m_tcp);
+    m_tcp.data = this;
+
+    m_writeReq.data = this;
+    m_writesQueued = 0;
 
     http_parser_init(&m_httpParser, HTTP_REQUEST);
     m_httpParser.data = this;
 
     http_parser_settings_init(&m_httpParserSettings);
     m_httpParserSettings.on_message_complete = OnMessageComplete;
-
-    uv_tcp_init(&loop, &m_tcp);
-    m_tcp.data = this;
-
-    m_writeReq.data = this;
-    m_writePending = false;
-    m_writesQueued = 0;
 }
 
 void Connection::Close() {
-    if (!m_closing) {
-        m_closing = true;
+    if (m_state != State::closing) {
+        m_state = State::closing;
         uv_close(reinterpret_cast<uv_handle_t*>(&m_tcp), OnClose);
     }
+}
+
+void Connection::OnClose() {
+    m_server.OnConnectionClosed(*this);
 }
 
 void Connection::Read() {
@@ -40,25 +37,39 @@ void Connection::Read() {
     }
 }
 
-void Connection::OnAlloc(size_t hint, uv_buf_t* buf) {
+void Connection::OnAlloc(size_t, uv_buf_t* buf) {
     buf->base = m_buffer;
     buf->len = sizeof(m_buffer);
 }
 
 void Connection::OnRead(ssize_t nread, const uv_buf_t* buf) {
-    if (nread > 0) {
-        size_t nparsed = http_parser_execute(
-            &m_httpParser, &m_httpParserSettings, m_buffer, nread);
+    if (nread < 0) {
+        Close();
+        return;
+    }
 
-        if (nparsed != nread) {
-            Close();
-        }
-    } else {
+    if (nread == 0) {
+        CloseOnWriteComplete();
+        return;
+    }
+
+    size_t nparsed = http_parser_execute(&m_httpParser, &m_httpParserSettings,
+                                         m_buffer, nread);
+
+    if (nparsed != nread) {
         Close();
     }
 }
 
+// TODO: Only close() in OnRead if there is no write pending
+// TODO: When see connection: close, stop reading, stop queueing, remember it.
+// on last write, set COnnection:close, close socket after completes
+
 void Connection::OnMessageComplete() {
+    if (!http_should_keep_alive(&m_httpParser)) {
+        m_httpShouldClose = true;
+    }
+
     if (m_writePending) {
         m_writesQueued += 1;
     } else {
@@ -67,15 +78,26 @@ void Connection::OnMessageComplete() {
 }
 
 void Connection::Write() {
+    // if this is the last pending write and we should close the connection,
+    // then return the close header and set the want close flag.
+
     m_writePending = true;
 
     const char response[] = "HTTP/1.1 200 OK\r\n"
                             "Server: uvbench\r\n"
-                            "Connection: keep-alive\r\n"
                             "Date: Thu, 16 Jun 2016 00:10:17 GMT\r\n"
-                            "Content-Length: 13\r\n"
+                            "Connection: keep-alive\r\n"
+                            "Content-Length: 4\r\n"
                             "\r\n"
-                            "Hello, world!";
+                            "ok\r\n";
+
+    const char response[] = "HTTP/1.1 200 OK\r\n"
+                            "Server: uvbench\r\n"
+                            "Date: Thu, 16 Jun 2016 00:10:17 GMT\r\n"
+                            "Connection: close\r\n"
+                            "Content-Length: 8\r\n"
+                            "\r\n"
+                            "donezo\r\n";
 
     m_writeBuf.base = const_cast<char*>(response);
     m_writeBuf.len = sizeof(response) - 1;
@@ -87,18 +109,17 @@ void Connection::Write() {
 }
 
 void Connection::OnWrite(int status) {
-    m_writePending = false;
-
     if (status) {
         Close();
-    } else if (m_writesQueued != 0) {
+        return;
+    }
+
+    m_writePending = false;
+
+    if (m_writesQueued != 0) {
         m_writesQueued -= 1;
         Write();
     }
-}
-
-void Connection::OnClose() {
-    m_server.OnConnectionClosed(*this);
 }
 
 void Connection::OnAlloc(uv_handle_t* handle, size_t hint, uv_buf_t* buf) {

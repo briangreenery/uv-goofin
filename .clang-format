@@ -8,6 +8,7 @@ AllowShortIfStatementsOnASingleLine: false
 AllowShortLoopsOnASingleLine: false
 AlwaysBreakBeforeMultilineStrings: false
 AlwaysBreakTemplateDeclarations: true
+BinPackArguments: true
 BinPackParameters: false
 BreakBeforeBinaryOperators: false
 BreakBeforeBraces: Attach

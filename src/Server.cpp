@@ -2,20 +2,30 @@
 #include "UVWrap.h"
 
 Server::Server(uv_loop_t& loop)
-    : m_loop(loop), m_nextFree(nullptr), m_pendingAccepts(0) {
+    : m_loop(loop), m_nextFree(nullptr), m_acceptsQueued(0) {
 
-    for (size_t i = 0; i < 4096; ++i) {
+    for (size_t i = 0; i < 1024; ++i) {
         m_connections.push_back(Connection(*this));
     }
 
     for (auto it = m_connections.begin(); it != m_connections.end(); ++it) {
-        AddFreeConnection(*it);
+        PushFree(*it);
     }
 }
 
-void Server::AddFreeConnection(Connection& connection) {
+void Server::PushFree(Connection& connection) {
     connection.SetNextConnection(m_nextFree);
     m_nextFree = &connection;
+}
+
+Connection* Server::PopFree() {
+    Connection* connection = m_nextFree;
+
+    if (connection) {
+        m_nextFree = connection->NextConnection();
+    }
+
+    return connection;
 }
 
 void Server::Listen(uint16_t port) {
@@ -33,37 +43,35 @@ void Server::Listen(uint16_t port) {
 }
 
 void Server::Accept() {
-    if (m_nextFree == nullptr) {
+    if (m_acceptsQueued == 0) {
         return;
     }
 
-    m_pendingAccepts -= 1;
+    Connection* connection = PopFree();
+    if (!connection) {
+        return;
+    }
 
-    Connection& connection = *m_nextFree;
-    m_nextFree = connection.NextConnection();
-
-    connection.Init(m_loop);
+    connection->Init();
+    m_acceptsQueued -= 1;
 
     if (uv_accept(reinterpret_cast<uv_stream_t*>(&m_tcp),
-                  reinterpret_cast<uv_stream_t*>(connection.GetHandle()))) {
-        AddFreeConnection(connection);
+                  reinterpret_cast<uv_stream_t*>(connection->GetHandle()))) {
+        PushFree(connection);
         return;
     }
 
-    connection.Read();
+    connection->Read();
 }
 
 void Server::OnConnectionClosed(Connection& connection) {
-    AddFreeConnection(connection);
-
-    if (m_pendingAccepts != 0) {
-        Accept();
-    }
+    PushFree(connection);
+    Accept();
 }
 
 void Server::OnConnection(int status) {
     if (status == 0) {
-        m_pendingAccepts += 1;
+        m_acceptsQueued += 1;
         Accept();
     }
 }
