@@ -123,16 +123,22 @@ void Connection::Write() {
     }
 
     m_writePending = true;
-    m_writesQueued -= 1;
 
-    if (m_keepAlive || m_writesQueued != 0) {
-        m_writeBuf = KeepAliveResponse();
-    } else {
-        m_writeBuf = CloseResponse();
+    size_t bufferCount = 0;
+    while (m_writesQueued > 0 && bufferCount < kNumWriteBufs) {
+
+        if (m_keepAlive || m_writesQueued > 1) {
+            m_writeBufs[bufferCount] = KeepAliveResponse();
+        } else {
+            m_writeBufs[bufferCount] = CloseResponse();
+        }
+
+        m_writesQueued -= 1;
+        bufferCount += 1;
     }
 
     if (uv_write(&m_writeReq, reinterpret_cast<uv_stream_t*>(&m_tcp),
-                 &m_writeBuf, 1, OnWrite)) {
+                 m_writeBufs, bufferCount, OnWrite)) {
         Close();
     }
 }

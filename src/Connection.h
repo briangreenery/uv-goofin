@@ -53,7 +53,9 @@ private:
     uv_shutdown_t m_shutdownReq;
 
     uv_write_t m_writeReq;
-    uv_buf_t m_writeBuf;
+
+    enum { kNumWriteBufs = 32 };
+    uv_buf_t m_writeBufs[kNumWriteBufs];
     bool m_writePending;
     size_t m_writesQueued;
 
@@ -61,7 +63,7 @@ private:
     http_parser_settings m_httpParserSettings;
     bool m_keepAlive;
 
-    char m_buffer[1024];
+    char m_buffer[2048];
 };
 
 inline Connection* Connection::NextConnection() {
